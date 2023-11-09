@@ -12,7 +12,7 @@ type userHandler struct {
 	userService user.Service
 }
 
-func NewsUserHandler(userService user.Service) *userHandler {
+func NewUserHandler(userService user.Service) *userHandler {
 	return &userHandler{userService}
 }
 
@@ -70,6 +70,43 @@ func (h *userHandler) LoginUser(c *gin.Context) {
 
 	response := helper.ApiResponse("Logged successfully", http.StatusOK, "success", formater)
 
+	c.JSON(http.StatusOK, response)
+
+}
+
+func (h *userHandler) CheckEmail(c *gin.Context) {
+	var input user.CheckEmailInput
+
+	err := c.ShouldBindJSON(&input)
+
+	if err != nil {
+		errors := helper.FormatValidationError(err)
+		errorMessage := gin.H{"errors": errors}
+
+		response := helper.ApiResponse("Email checking failed", http.StatusUnprocessableEntity, "error", errorMessage)
+		c.JSON(http.StatusBadRequest, response)
+		return
+	}
+
+	isEmail, err := h.userService.IsEmailAvailable(input)
+	if err != nil {
+		errorMessage := gin.H{"errors": "Server Error"}
+		response := helper.ApiResponse("Email checking failed", http.StatusUnprocessableEntity, "error", errorMessage)
+		c.JSON(http.StatusBadRequest, response)
+		return
+	}
+
+	data := gin.H{
+		"is_available": isEmail,
+	}
+
+	metaMessage := "Email has been registered"
+
+	if isEmail {
+		metaMessage = "Email is Available"
+	}
+
+	response := helper.ApiResponse(metaMessage, http.StatusOK, "success", data)
 	c.JSON(http.StatusOK, response)
 
 }
